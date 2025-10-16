@@ -1,17 +1,28 @@
 // api/read-exif.js
-const exifParser = require('exif-reader');
+import exifr from 'exifr';
+
+export const config = {
+  api: {
+    bodyParser: false, // penting! agar body tetap dalam bentuk Buffer
+  },
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).send({ error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // Vercel secara otomatis mem-parsing body menjadi buffer
-  const fileBuffer = req.body;
-
   try {
-    const exif = exifParser(fileBuffer);
-    const photoTimestamp = exif?.exif?.DateTimeOriginal || null;
+    // Ambil buffer dari stream request
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const fileBuffer = Buffer.concat(chunks);
+
+    // Baca metadata EXIF
+    const exif = await exifr.parse(fileBuffer);
+    const photoTimestamp = exif?.DateTimeOriginal || null;
     let isRecent = false;
 
     if (photoTimestamp) {
@@ -21,14 +32,13 @@ export default async function handler(req, res) {
       }
     }
 
-    // Kirim kembali hasil yang terstruktur
     res.status(200).json({
       isPhotoRecent: isRecent,
       photoTakenAt: photoTimestamp,
     });
 
   } catch (error) {
-    // Jika tidak ada EXIF atau error lain, kirim hasil negatif
+    console.error(error);
     res.status(200).json({
       isPhotoRecent: false,
       photoTakenAt: null,

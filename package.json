@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "exif-reader": "^1.0.0" 
+    "exif-reader": "^1.0.0",
+    "exifr": "^7.1.3"
   }
 }
